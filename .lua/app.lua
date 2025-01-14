@@ -74,7 +74,6 @@ function app.setAuthData( folder, data )
 end
 
 function app.getFolderAuth( folder, token)
-    --Log(kLogInfo, 'fuck')
     local authData = app.getAuthData( folder )
     local auth = authData.pwd == '' and true or false
     if not auth and token then
