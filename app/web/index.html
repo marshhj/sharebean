@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> SHAREBEAN </title>
+    <style>
+        *, *::before, *::after {    box-sizing: border-box; }
+        * { margin: 0; }
+        body { line-height: 1.5; -webkit-font-smoothing: antialiased; }
+        input, button, textarea, select { font: inherit; }
+
+        .center-item{ display: flex; justify-content: center; align-items: center;}
+        .primary { color:rgb(75, 143, 220); }
+        .pointer {cursor: pointer;}
+        table,table tr th, table tr td { border:1px solid lightgray; padding:5px}
+        table {border-collapse: collapse;}  
+        .dialog { width:100vw; height:100vh; position: fixed; left:0px; top:0px; background-color: #000000cc; 
+            display: flex; justify-content: center; align-items: center; }
+        .card {min-width: 300px; background-color: #FAFAFA; padding:10px; border-radius: 5px;}
+        .card-footer { justify-content: end; gap: 5px;}
+        button {cursor: pointer;}
+        .gray { color: gray; }
+        .clickable { cursor: pointer; font-weight: 500; text-decoration: underline; text-underline-offset: 4px;}
+
+        .fade-enter-active, .fade-leave-active { transition: opacity .25s; }
+        .fade-enter, .fade-leave-to { opacity: 0; }
+    </style>
+    <link rel="stylesheet" href="/wing.min.css">
+    <script src="/vue2.js"></script>
+    <script src="/vue-i18n.min.js"></script>
+    <script src="/tus.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- home -->
+        <div v-if="page=='home'" class="page-home" style="height: 100vh; display: flex; flex-direction: column; ">
+            <div style="flex:1;" class="center-item">
+                <div style="margin:60px 20px 150px 20px; width:500px; min-width: 300px;">
+                    <h1 class="text-center" style="font-weight: bold;"> {{ $t("home.title") }} </h1>
+                    <div style="height:16px; text-align: center; color:red;">  {{tips}} </div>
+                    <div style="display: flex; gap:10px;">
+                        <div style="flex:1;">
+                            <input type="text" v-model="iFolder" :placeholder="$t('home.inputFolder')" @keyup.enter="onEnter"/>
+                        </div>
+                        <div style="width:100px;">
+                            <button @click="onEnter"> {{ $t("home.enter") }} </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- create -->
+        <div v-if="page=='create'" class="page-create" style="height: 100vh; display: flex; flex-direction: column; ">
+            <div>   
+                <h5 style="font-weight: bold; padding: 10px; display: inline-block;" class="pointer" @click="onHome"> {{ $t("home.title") }} </h5>
+            </div>
+            <div style="flex:1;" class="center-item">
+                <div style="margin:60px 20px 150px 20px; width:500px; min-width: 300px;">
+                    <h1 style="text-align: center; font-weight: bold; margin-bottom: 20px;" > {{ $t("create.title") }} </h1>
+                    <div>
+                        <input style="font-size: 16px;" type="text" readonly v-model="iFolder" :placeholder="$t('home.inputFolder')"/>
+                        <input type="password" v-model="iSPwd" :placeholder="$t('create.inviteCode')" @keyup.enter="onCreate"/>
+                        <button style="width: 100%;" @click="onCreate"> {{ $t('create.create') }} </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- upload -->
+        <div v-if="page=='upload'" class="page-upload" style="padding:5px 10px;">
+            <div style="height:60px; white-space: nowrap;">
+                <div style="display: inline-block;line-height: 60px;font-size: 24px; font-weight: 700; white-space: nowrap;">
+                    <span class="clickable" style="font-weight: 700;" @click="onHome">{{ $t("home.title") }} </span>
+                    <span class="gray"> /  {{ folder }} </span>
+                </div>
+                <div style="float:right">
+                    <span v-if="auth">
+                        <button @click="onUpload"> {{ $t("upload.upload") }}  </button>
+                        <button @click="onDialogSet"> {{ $t("upload.set") }} </button>
+                    </span>
+                    <span v-else>
+                        <div style="display: inline-block;"> <input type="password" v-model="iPwd" @keyup.enter="onAuth" :placeholder="$t('upload.inputAuth')"></input> </div>
+                        <div style="display: inline-block;"> <button @click="onAuth"> {{ $t("upload.auth") }} </button> </div>
+                    </span>
+                </div>
+            </div>
+
+
+            <div style="margin: 5px 0px; border: 1px solid gray; position: relative;" v-if="uploadTips != ''">
+                <div style="height:50px;line-height: 50px;">
+                    <div style="background-color:lightgray;white-space: nowrap;" :style="{width: uploadProgress+'%'}"> {{uploadTips}} </div>
+                    <div class="pointer" style="position: absolute; top:0px; right:20px; font-size: 30px; font-weight: 700;" @click="onCancelUpload"> × </div>
+                </div>
+            </div>
+
+            <table style="width: 95%;margin: 20px auto;">
+                <thead>
+                    <tr>
+                        <th class="gray" style="text-align: left;"> {{$t('upload.filename')}} </th>
+                        <th class="gray" style="width:100px"> {{$t('upload.size')}} </th>
+                        <th class="gray" style="width:100px"> {{$t('upload.action')}} </th>
+                    </tr>
+                </thead>
+                <tr v-for="ele in files">
+                    <td> <span class="clickable" style="font-weight: 500;" :style="{color:ele.hide ? 'gray': 'black'}" @click="onOpenUrl(ele.view)">{{ele.name}} </span> </td>
+                    <td> {{ humanSize( ele.size )}} </td>
+                    <td> 
+                        <span class="clickable" style="margin-right:5px;" @click="onOpenUrl(ele.download)">{{$t('upload.download')}}</span> 
+                        <span class="clickable" v-if="auth" @click="onDelete(ele.name)">{{$t('upload.del')}}</span> 
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- dialog -->
+        <transition name="fade">
+            <div class="dialog" v-if="dialog" @click=";">
+                <div class="card"  v-if="dialog.name == 'set'" @click.stop=";">
+                    <h5 class="card-header"> {{$t('upload.set')}} </h5>
+                    <div class="card-body">
+                        <label> {{$t('upload.changePwd')}} </label>
+                        <div><input type="password" v-model="iPwd" :placeholder="$t('upload.changePwd')"/></div>
+                        <label> {{$t('upload.hideRule')}} </label>
+                        <div><textarea style="min-height: 150px;" v-model="iHide" :placeholder="$t('upload.hideRule')"></textarea></div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="outline" @click="dialog=null"> {{$t('upload.close')}} </button>
+                        <button @click="onSaveSet"> {{$t('upload.save')}} </button>
+                    </div>
+                </div>
+
+                <div class="card" v-if="dialog.name == 'msgbox'" @click.stop=";">
+                    <h5 class="card-header"> {{ dialogTitle  }} </h5>
+                    <div class="card-body">
+                        {{ dialogMsg  }}
+                    </div>
+                    <div class="card-footer">
+                        <button class="outline" @click="onMessageBoxCancel"> {{$t('home.cancel')}} </button>
+                        <button @click="onMessageBoxOK"> {{$t('home.ok')}} </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </div>
+    <script src="/sharebean.js"> </script>
+</body>
+</html>
