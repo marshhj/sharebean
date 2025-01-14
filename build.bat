@@ -5,7 +5,7 @@ call :DownloadFileIfNotExists "redbean.exe" "https://redbean.dev/redbean-3.0.0.c
 call :DownloadFileIfNotExists "zip.exe" "https://cosmo.zip/pub/cosmos/bin/zip"
 
 cp redbean.exe sharebean.exe
-zip -r sharebean.exe ".init.lua" ".lua/" "app"
+zip -r sharebean.exe ".init.lua" ".lua/" "app/"
 
 echo Build success!
 pause
